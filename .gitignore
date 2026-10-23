@@ -9,5 +9,3 @@ local-config.js
 # ログ
 *.log
 
-# 写真の原本（Web用に縮小したものを images/ に置く）
-images-source/
