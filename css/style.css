@@ -89,13 +89,22 @@ p { margin: 0 0 1em; }
 .header-tel__number { display: block; font-size: 1.35rem; font-weight: 700; color: var(--color-primary-dark); }
 .header-tel__hours { font-size: 0.85rem; color: var(--color-muted); }
 
-/* 公式Instagram：ヘッダーの右端に丸いアイコンボタン（タップ領域44px）。ふだんは緑の線、ホバーで塗りつぶす */
+/* 公式Instagram：Instagram らしいグラデーション（白文字とのコントラスト5:1以上の3色）の角丸ボタン。
+   狭い幅（480px未満・電話番号と並ぶ720〜959px）は丸いアイコンだけ、それ以外は「公式Instagram」の文字も出す */
+:root { --insta-gradient: linear-gradient(45deg, #c4381f 0%, #c13584 50%, #833ab4 100%); }
 .header-insta {
-  display: grid; place-items: center; flex: none; width: 44px; height: 44px; margin-left: -12px; border-radius: 50%;
-  border: 2px solid var(--color-border); background: var(--color-surface); color: var(--color-primary-dark);
-  transition: background-color 0.15s, border-color 0.15s, color 0.15s;
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px; flex: none; min-width: 46px; height: 46px; margin-left: -12px;
+  padding: 0 11px; border-radius: 999px; background: var(--insta-gradient); color: #fff; font-weight: 700; font-size: 0.95rem;
+  text-decoration: none; white-space: nowrap; box-shadow: 0 4px 12px rgba(193, 53, 132, 0.28);
+  transition: transform 0.2s, box-shadow 0.2s, filter 0.2s;
 }
-.header-insta:hover { border-color: var(--color-primary); background: var(--color-primary); color: #fff; }
+.header-insta:hover { color: #fff; transform: translateY(-2px); box-shadow: 0 8px 18px rgba(193, 53, 132, 0.38); filter: saturate(1.15) brightness(1.05); }
+.header-insta .insta-icon { width: 24px; height: 24px; }
+.header-insta__text { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+@media (min-width: 480px) and (max-width: 719px), (min-width: 960px) {
+  .header-insta { padding: 0 18px 0 14px; }
+  .header-insta__text { position: static; width: auto; height: auto; overflow: visible; clip: auto; }
+}
 .insta-icon { flex: none; width: 22px; height: 22px; }
 
 .site-nav { background: var(--color-primary-soft); }
@@ -541,13 +550,15 @@ fieldset[aria-invalid="true"] .choice { border-color: var(--color-error); }
 .site-footer__grid { display: grid; gap: 24px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr)); }
 .site-footer__name { font-size: 1.15rem; font-weight: 700; margin-bottom: 8px; }
 .site-footer__tel { font-size: 1.4rem; font-weight: 700; text-decoration: none; }
-/* フッターの公式Instagram：白い線の角丸ボタン（高さ44px）。ホバーで白く塗りつぶす */
+/* フッターの公式Instagram：ヘッダーと同じグラデーションの角丸ボタン（高さ48px）。ホバーで少し浮き上がる */
 .footer-insta {
-  display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 6px 18px 6px 14px;
-  border: 1.5px solid rgba(255, 255, 255, 0.7); border-radius: 999px; font-weight: 700; text-decoration: none;
-  transition: background-color 0.15s, color 0.15s;
+  display: inline-flex; align-items: center; gap: 8px; min-height: 48px; padding: 6px 22px 6px 16px;
+  border: 1.5px solid rgba(255, 255, 255, 0.55); border-radius: 999px; background: var(--insta-gradient);
+  font-weight: 700; text-decoration: none; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  transition: transform 0.2s, box-shadow 0.2s, filter 0.2s;
 }
-.site-footer .footer-insta:hover { background: #fff; color: var(--color-primary-dark); }
+.footer-insta .insta-icon { width: 24px; height: 24px; }
+.site-footer .footer-insta:hover { color: #fff; transform: translateY(-2px); box-shadow: 0 8px 18px rgba(0, 0, 0, 0.28); filter: saturate(1.15) brightness(1.05); }
 .footer-nav { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
 .footer-nav a { display: inline-block; padding: 4px 0; }
 .copyright { margin: 32px 0 0; padding-top: 16px; border-top: 1px solid rgba(255, 255, 255, 0.3); font-size: 0.85rem; text-align: center; }
@@ -577,7 +588,7 @@ body { padding-bottom: 76px; }
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
   .news-row, .news-row__toggle::before, .highlight-card, .attach-mark, .header-insta, .footer-insta { transition: none; }
-  .highlight-card:hover { transform: none; }
+  .highlight-card:hover, .header-insta:hover, .site-footer .footer-insta:hover { transform: none; }
   .page-header__mascot, .hero__mascot { animation: none; }
 }
 
