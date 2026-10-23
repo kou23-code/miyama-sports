@@ -32,6 +32,11 @@ PAGES.forEach((page) => {
     targets.forEach((url) => assert.ok(fs.existsSync(path.join(ROOT, url)), `${url} が見つかりません`));
   });
 
+  test(`${page}：画像はリポジトリ内の ./images/ を参照し、alt 属性を持つ`, () => {
+    const imgs = [...readPage(page).matchAll(/<img[^>]*>/g)].map((m) => m[0]);
+    imgs.forEach((tag) => assert.match(tag, /src="\.\/images\/[a-z0-9-]+\.jpg"[^>]* alt="/, tag));
+  });
+
   test(`${page}：5ページ分のメニューと決められた順のスクリプトを持つ`, () => {
     const html = readPage(page);
     assert.equal((html.match(/data-nav="/g) ?? []).length, 5);

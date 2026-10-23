@@ -101,8 +101,13 @@ const sessionsHtml = (item) =>
   tplDeps.hasMultipleSessions(item)
     ? `<ul class="class-card__sessions" aria-label="クラス別の時間・定員">${item.sessions.map(sessionHtml).join('')}</ul>` : '';
 
+// 活動写真がある教室だけ、カードの先頭に写真を出す
+const classPhotoHtml = (photo) =>
+  photo ? `<img class="class-card__photo" src="${escapeHtml(photo.src)}" alt="${escapeHtml(photo.alt)}" loading="lazy">` : '';
+
 const classCardHtml = (item, ageGroups) => `
   <article class="class-card" id="${escapeHtml(item.id)}">
+    ${classPhotoHtml(item.photo)}
     <h3 class="class-card__title"><span class="class-card__icon" aria-hidden="true">${escapeHtml(item.icon)}</span>${escapeHtml(tplDeps.classDisplayName(item))}</h3>
     <div class="class-card__ages">${ageBadgesHtml(ageGroups, item.ages)}</div>
     <p class="class-card__summary">${escapeHtml(item.summary)}</p>
