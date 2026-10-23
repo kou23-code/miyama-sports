@@ -101,9 +101,15 @@ const attachmentPreviewSrc = (url) => {
   return isImageFileUrl(url) ? newsText(url) : '';
 };
 
-// 添付ファイルURLを { href（開くURL）, previewSrc（プレビュー画像のURL。無ければ空文字） } にする（使えないURLは null）
+// 添付の種類（バッジ・ボタンの表示用）：PDF は 'pdf'、プレビュー画像がある（ドライブ・画像ファイル）なら 'flyer'、それ以外は 'file'
+const attachmentKind = (url) => {
+  if (/\.pdf(?:[?#]|$)/i.test(newsText(url))) return 'pdf';
+  return attachmentPreviewSrc(url) ? 'flyer' : 'file';
+};
+
+// 添付ファイルURLを { href（開くURL）, previewSrc（プレビュー画像のURL。無ければ空文字）, kind（種類） } にする（使えないURLは null）
 const newsAttachment = (url) =>
-  isHttpsUrl(url) ? Object.freeze({ href: newsText(url), previewSrc: attachmentPreviewSrc(url) }) : null;
+  isHttpsUrl(url) ? Object.freeze({ href: newsText(url), previewSrc: attachmentPreviewSrc(url), kind: attachmentKind(url) }) : null;
 
 // ---- 一覧から詳細へのリンク ----
 
@@ -149,6 +155,6 @@ if (typeof module === 'object' && module.exports) {
     sortNewsByDate, filterNewsByCategory, latestNews, categoryLabel, formatDateJa, newsOrder, sortNewsForDisplay,
     newsText, isNewsDate, newsEntryErrors, findNewsProblems, toNewsItem, prepareNews,
     isNewsEndpoint, parseNewsResponse,
-    isHttpsUrl, driveFileId, attachmentPreviewSrc, newsAttachment, findAttachmentProblems, hasNewsOrder, newsAnchorId,
+    isHttpsUrl, driveFileId, attachmentPreviewSrc, attachmentKind, newsAttachment, findAttachmentProblems, hasNewsOrder, newsAnchorId,
   };
 }

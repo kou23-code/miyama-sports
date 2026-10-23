@@ -5,7 +5,7 @@ const {
   sortNewsByDate, filterNewsByCategory, latestNews, categoryLabel, formatDateJa, newsOrder, sortNewsForDisplay,
   isNewsDate, newsEntryErrors, findNewsProblems, toNewsItem, prepareNews,
   isNewsEndpoint, parseNewsResponse,
-  isHttpsUrl, driveFileId, attachmentPreviewSrc, newsAttachment, findAttachmentProblems, hasNewsOrder, newsAnchorId,
+  isHttpsUrl, driveFileId, attachmentPreviewSrc, attachmentKind, newsAttachment, findAttachmentProblems, hasNewsOrder, newsAnchorId,
 } = require('../js/lib/news-logic.js');
 
 const sample = [
@@ -146,10 +146,17 @@ test('プレビュー画像はドライブならサムネイル、画像ファ�
   assert.equal(attachmentPreviewSrc('https://example.com/guide.pdf'), '');
 });
 
+test('添付の種類は PDF・チラシ（プレビュー画像あり）・その他の資料に分ける', () => {
+  assert.equal(attachmentKind('https://example.com/guide.PDF?dl=1'), 'pdf');
+  assert.equal(attachmentKind(`https://drive.google.com/file/d/${DRIVE_ID}/view`), 'flyer');
+  assert.equal(attachmentKind('https://example.com/flyer.png'), 'flyer');
+  assert.equal(attachmentKind('https://docs.google.com/document/d/x/edit'), 'file');
+});
+
 test('添付ファイルは開くURLとプレビュー画像のURLにし、使えないURLは null', () => {
   const share = `https://drive.google.com/file/d/${DRIVE_ID}/view`;
-  assert.deepEqual(newsAttachment(share), { href: share, previewSrc: THUMBNAIL });
-  assert.deepEqual(newsAttachment('https://example.com/guide.pdf'), { href: 'https://example.com/guide.pdf', previewSrc: '' });
+  assert.deepEqual(newsAttachment(share), { href: share, previewSrc: THUMBNAIL, kind: 'flyer' });
+  assert.deepEqual(newsAttachment('https://example.com/guide.pdf'), { href: 'https://example.com/guide.pdf', previewSrc: '', kind: 'pdf' });
   assert.equal(Object.isFrozen(newsAttachment(share)), true);
   [undefined, '', 'http://example.com/a.png'].forEach((url) => assert.equal(newsAttachment(url), null, String(url)));
 });
