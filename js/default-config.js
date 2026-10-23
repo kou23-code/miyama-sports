@@ -1,11 +1,11 @@
-// 公開用ダミー設定（実在の名称・個人情報は記載しないこと）
-// 実名表示が必要な場合は .gitignore 対象の ./config.js で SITE_CONFIG を定義して上書きする
+// 公開用設定（クラブの公開情報のみ記載。個人名・個人の連絡先は記載しないこと）
+// 手元だけ値を変えたい場合は .gitignore 対象の ./config.js で SITE_CONFIG を定義して上書きする
 const DEFAULT_CONFIG = Object.freeze({
-  clubName: 'あおぞら総合型地域スポーツクラブ',
-  clubShortName: 'あおぞらクラブ',
-  address: '架空県みどり市さくら町1-2-3',
-  tel: '000-000-0000',
-  telHours: '受付：火〜土 9:00〜17:00',
+  clubName: 'みやまスポーツクラブ',
+  clubShortName: 'みやまスポーツクラブ',
+  address: '岡山県玉野市田井2-4464-10 玉野スポーツセンター内',
+  tel: '0863-31-0888',
+  telHours: '受付：火～土 9:00～19:00',
   access: '架空鉄道みどり線「さくら町駅」から徒歩約10分',
   venue: 'さくら町スポーツセンター（架空）',
   copyrightYear: '2026',
