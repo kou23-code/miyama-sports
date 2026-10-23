@@ -161,7 +161,7 @@ const newsWith = (attachmentUrl) => ({ date: '2026-10-15', category: 'event', ti
 test('本文も添付も無いお知らせは、開かない1行だけにし、添付ありのアイコンも付けない', () => {
   const html = tpl.newsListHtml([newsWith('')], NEWS_CATEGORIES);
   assert.match(html, /<div class="news-row news-row--static">/);
-  assert.doesNotMatch(html, /<details|news-row__clip|news-file-button/);
+  assert.doesNotMatch(html, /<details|attach-badge|news-file-button/);
 });
 
 test('本文があるお知らせは、行を押すと本文が開く（改行を保つため段落1つに入れる）', () => {
@@ -174,19 +174,32 @@ test('ドライブの添付は大きな画像（幅1600pxのサムネイル）�
   const html = tpl.newsListHtml([newsWith('https://drive.google.com/file/d/abc123/view?usp=sharing')], NEWS_CATEGORIES);
   assert.match(html, /<img class="news-figure__image" src="https:\/\/drive\.google\.com\/thumbnail\?id=abc123&amp;sz=w1600"/);
   assert.match(html, /href="https:\/\/drive\.google\.com\/file\/d\/abc123\/view\?usp=sharing" target="_blank" rel="noopener noreferrer">/);
-  assert.match(html, /ファイルを開く<span class="visually-hidden">（体験会&lt;案内&gt;・新しいタブで開きます）/);
-  assert.match(html, /class="news-row__clip" role="img" aria-label="添付ファイルあり"/);
+  assert.match(html, /<\/svg>チラシを開く<span class="visually-hidden">（体験会&lt;案内&gt;・新しいタブで開きます）/);
+  assert.match(html, /<span class="attach-badge attach-badge--flyer"><svg class="attach-icon"[^>]*aria-hidden="true"[^>]*>[\s\S]*?<\/svg>チラシあり<\/span>/);
 });
 
-test('画像以外の添付は大きな「ファイルを開く」ボタンだけを表示し、画像は付けない', () => {
+test('PDF の添付は「PDFあり」バッジと「PDFを開く」ボタンを表示し、画像は付けない', () => {
   const html = tpl.newsListHtml([newsWith('https://example.com/guide.pdf')], NEWS_CATEGORIES);
-  assert.match(html, /class="button button--primary news-file-button"[^>]*>\s*<span aria-hidden="true">📄<\/span>ファイルを開く/);
+  assert.match(html, /class="attach-badge attach-badge--pdf">[\s\S]*?<\/svg>PDFあり<\/span>/);
+  assert.match(html, /class="button button--primary news-file-button"[^>]*>\s*<svg class="attach-icon"[\s\S]*?<\/svg>PDFを開く/);
   assert.doesNotMatch(html, /<img|news-figure/);
 });
 
-test('https 以外の添付URLはリンクにしない', () => {
+test('画像・PDF 以外の添付は「資料あり」バッジと「資料を開く」ボタンを表示する', () => {
+  const html = tpl.newsListHtml([newsWith('https://docs.google.com/document/d/x/edit')], NEWS_CATEGORIES);
+  assert.match(html, /attach-badge--file">[\s\S]*?<\/svg>資料あり<\/span>/);
+  assert.match(html, /<\/svg>資料を開く/);
+});
+
+test('トップの最新お知らせ（リンクの行）にも添付のバッジを付け、バッジ自体はリンクにしない', () => {
+  const html = tpl.newsLinkListHtml([newsWith('https://example.com/flyer.jpg')], NEWS_CATEGORIES);
+  assert.match(html, /<a class="news-row" href="\.\/news\.html#[^"]+">[\s\S]*attach-badge--flyer[\s\S]*<\/a>/);
+  assert.equal((html.match(/<a /g) ?? []).length, 1);
+});
+
+test('https 以外の添付URLはリンクにせず、バッジも付けない', () => {
   ['javascript:alert(1)', 'http://example.com/a.png'].forEach((url) =>
-    assert.doesNotMatch(tpl.newsListHtml([newsWith(url)], NEWS_CATEGORIES), /news-file-button|news-row__clip|javascript:/, url));
+    assert.doesNotMatch(tpl.newsListHtml([newsWith(url)], NEWS_CATEGORIES), /news-file-button|attach-badge|javascript:/, url));
 });
 
 test('固定順位があるお知らせには「固定」バッジを付ける', () => {
