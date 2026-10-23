@@ -287,6 +287,22 @@ p { margin: 0 0 1em; }
 .class-session { padding: 10px 14px; border: 2px solid var(--color-primary-soft); border-radius: var(--radius-small); }
 .class-session__title { margin: 0 0 4px; font-weight: 700; color: var(--color-primary-dark); }
 .class-card .button { margin-top: auto; }
+.class-card__photo { display: block; width: 100%; aspect-ratio: 16 / 10; object-fit: cover; border-radius: var(--radius-small); background: var(--color-green-soft); }
+
+/* 活動写真：画像が読み込めないときは淡い緑の枠が見える */
+.photo-gallery { list-style: none; margin: 24px 0 0; padding: 0; display: grid; gap: 24px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr)); }
+.photo-card { margin: 0; overflow: hidden; background: var(--color-surface); border-radius: var(--radius); box-shadow: var(--shadow); }
+.photo-card img { display: block; width: 100%; height: auto; aspect-ratio: 4 / 3; object-fit: cover; background: var(--color-green-soft); }
+.photo-card figcaption { padding: 14px 18px 18px; font-size: 0.95rem; }
+.photo-card figcaption strong { display: block; margin-bottom: 2px; color: var(--color-primary-dark); }
+.photo-card--wide { margin: 24px 0; }
+.photo-card--wide img { aspect-ratio: 16 / 9; }
+
+/* マスコット紹介：イラストは白背景のため白いカードにのせる */
+.mascot { margin-top: 32px; padding: 24px; background: var(--color-surface); border-radius: var(--radius); box-shadow: var(--shadow); }
+.mascot__title { margin: 0 0 8px; color: var(--color-primary-dark); }
+.mascot__list { list-style: none; margin: 16px 0 0; padding: 0; display: grid; gap: 16px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 140px), 1fr)); align-items: center; }
+.mascot__list img { display: block; width: 100%; height: auto; max-height: 160px; object-fit: contain; }
 
 /* ---------- 会費システム（全教室共通） ---------- */
 

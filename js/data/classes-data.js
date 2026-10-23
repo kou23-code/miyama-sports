@@ -14,6 +14,9 @@ const classSession = (label, target, time, capacity, capacityNote = '') =>
 // 会費。term（期間）・count（回数）は無い場合は省略する
 const classFee = (amount, term = '', count = 0) => Object.freeze({ amount, term, count });
 
+// 教室の活動写真（images/ に置いた本番写真）。写真の無い教室は photo を省略する
+const classPhoto = (src, alt) => Object.freeze({ src, alt });
+
 const CLASSES_DATA = Object.freeze([
   Object.freeze({
     id: 'track-kids', icon: '🏃', name: '陸上教室①', ages: Object.freeze(['elementary']),
@@ -33,6 +36,7 @@ const CLASSES_DATA = Object.freeze([
     sessions: Object.freeze([classSession('①', '年少〜年長', '17:00〜18:00', 20), classSession('②', '小学生', '18:15〜19:15', 25)]),
     fee: classFee(4800, '3ヶ月', 8), place: 'さくら町スポーツセンター 多目的室',
     summary: '鬼ごっこやマット遊びで、体を動かす楽しさと基礎体力を育てます。',
+    photo: classPhoto('./images/class-play.jpg', '体育館のマットの上で、ジャンプしたり走ったりして遊ぶ子どもたち'),
   }),
   Object.freeze({
     id: 'gymnastics', icon: '🙆', name: '体操教室', ages: Object.freeze(['preschool', 'elementary']),
@@ -52,6 +56,7 @@ const CLASSES_DATA = Object.freeze([
     day: '隔週', sessions: Object.freeze([classSession('', '小学生〜高校生', '19:00〜20:30', 15)]),
     fee: classFee(5000, '3ヶ月', 10), place: 'さくら町スポーツセンター トレーニング室',
     summary: '正しいフォームを基礎から指導。成長期の体に合わせて、安全に力強さを身につけます。',
+    photo: classPhoto('./images/class-weightlifting.jpg', '指導者に姿勢を教わりながら、木の棒でフォームを練習する子どもたち'),
   }),
   Object.freeze({
     id: 'senior-strength', icon: '💪', name: '高齢者向け筋力アップ教室', ages: Object.freeze(['senior']),

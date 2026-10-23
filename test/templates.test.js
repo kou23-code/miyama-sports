@@ -54,6 +54,17 @@ test('体操教室のカードは会費のみ表示し、個別の年会費は�
   assert.equal(CLASSES_DATA.some((item) => tpl.classCardHtml(item, AGE_GROUPS).includes('年会費')), false);
 });
 
+test('活動写真のある教室だけ、カードに写真と代替テキストを表示する', () => {
+  const withPhoto = CLASSES_DATA.find((item) => item.id === 'play');
+  assert.match(tpl.classCardHtml(withPhoto, AGE_GROUPS), /<img class="class-card__photo" src="\.\/images\/class-play\.jpg" alt="[^"]+" loading="lazy">/);
+  assert.equal(tpl.classCardHtml(CLASSES_DATA[0], AGE_GROUPS).includes('<img'), false);
+});
+
+test('教室写真の src・alt はエスケープする', () => {
+  const item = { ...CLASSES_DATA[0], photo: { src: './a.jpg"x', alt: '<b>' } };
+  assert.match(tpl.classCardHtml(item, AGE_GROUPS), /src="\.\/a\.jpg&quot;x" alt="&lt;b&gt;"/);
+});
+
 test('会費システムは4期の一覧と3項目の説明を表示する', () => {
   const html = tpl.feeSystemHtml(FEE_SYSTEM);
   assert.equal((html.match(/<li>/g) ?? []).length, 4);
