@@ -53,13 +53,13 @@ test('ブラウザ環境でも「会費について」ブロック全体を組�
 
 test('config.js 未配置ならダミー設定を使う', () => {
   const context = loadScripts('');
-  assert.equal(vm.runInContext('resolveSiteConfig().clubName', context), 'あおぞら総合型地域スポーツクラブ');
+  assert.equal(vm.runInContext('resolveSiteConfig().clubName', context), 'みやまスポーツクラブ');
 });
 
 test('config.js（SITE_CONFIG）があれば値が上書きされる', () => {
   const context = loadScripts("const SITE_CONFIG = { clubName: '上書きクラブ', tel: '000-111-2222' };");
   assert.equal(vm.runInContext('resolveSiteConfig().clubName', context), '上書きクラブ');
-  assert.equal(vm.runInContext('resolveSiteConfig().address', context), '架空県みどり市さくら町1-2-3');
+  assert.equal(vm.runInContext('resolveSiteConfig().address', context), '岡山県玉野市田井2-4464-10 玉野スポーツセンター内');
 });
 
 test('config-sample.js はそのまま SITE_CONFIG として読み込める', () => {
