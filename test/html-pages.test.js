@@ -33,8 +33,9 @@ PAGES.forEach((page) => {
   });
 
   test(`${page}：画像はリポジトリ内の ./images/ を参照し、alt 属性を持つ`, () => {
-    const imgs = [...readPage(page).matchAll(/<img[^>]*>/g)].map((m) => m[0]);
-    imgs.forEach((tag) => assert.match(tag, /src="\.\/images\/[a-z0-9-]+\.jpg"[^>]* alt="/, tag));
+    const imgs = [...readPage(page).matchAll(/<img\b[^>]*>/g)].map((m) => m[0]);
+    assert.ok(imgs.length > 0, "画像（少なくともヘッダーのマスコット）がある");
+    imgs.forEach((tag) => assert.match(tag, /src="\.\/images\/[a-z0-9-]+\.(jpg|png)"[^>]* alt="/, tag));
   });
 
   test(`${page}：5ページ分のメニューと決められた順のスクリプトを持つ`, () => {
