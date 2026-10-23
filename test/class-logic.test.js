@@ -104,6 +104,11 @@ test('複数クラスの教室はカード上段に対象・曜日のみ、ク�
   ]);
 });
 
+test('全7教室の会場は玉野スポーツセンター', () => {
+  assert.equal(CLASSES_DATA.length, 7);
+  CLASSES_DATA.forEach((item) => assert.equal(rowValue(classFeeRows(item), '会場'), '玉野スポーツセンター', item.id));
+});
+
 test('カード下段はどの教室も会費・会場のみ', () => {
   CLASSES_DATA.forEach((item) => assert.deepEqual(classFeeRows(item).map(([label]) => label), ['会費', '会場']));
   assert.equal(rowValue(classFeeRows(byId('gymnastics')), '会費'), '3,600円');
