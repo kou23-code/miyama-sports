@@ -89,6 +89,15 @@ p { margin: 0 0 1em; }
 .header-tel__number { display: block; font-size: 1.35rem; font-weight: 700; color: var(--color-primary-dark); }
 .header-tel__hours { font-size: 0.85rem; color: var(--color-muted); }
 
+/* 公式Instagram：ヘッダーの右端に丸いアイコンボタン（タップ領域44px）。ふだんは緑の線、ホバーで塗りつぶす */
+.header-insta {
+  display: grid; place-items: center; flex: none; width: 44px; height: 44px; margin-left: -12px; border-radius: 50%;
+  border: 2px solid var(--color-border); background: var(--color-surface); color: var(--color-primary-dark);
+  transition: background-color 0.15s, border-color 0.15s, color 0.15s;
+}
+.header-insta:hover { border-color: var(--color-primary); background: var(--color-primary); color: #fff; }
+.insta-icon { flex: none; width: 22px; height: 22px; }
+
 .site-nav { background: var(--color-primary-soft); }
 .site-nav__list { list-style: none; margin: 0; padding: 8px 16px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; max-width: var(--container); margin-inline: auto; }
 .site-nav__list a {
@@ -532,6 +541,13 @@ fieldset[aria-invalid="true"] .choice { border-color: var(--color-error); }
 .site-footer__grid { display: grid; gap: 24px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr)); }
 .site-footer__name { font-size: 1.15rem; font-weight: 700; margin-bottom: 8px; }
 .site-footer__tel { font-size: 1.4rem; font-weight: 700; text-decoration: none; }
+/* フッターの公式Instagram：白い線の角丸ボタン（高さ44px）。ホバーで白く塗りつぶす */
+.footer-insta {
+  display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 6px 18px 6px 14px;
+  border: 1.5px solid rgba(255, 255, 255, 0.7); border-radius: 999px; font-weight: 700; text-decoration: none;
+  transition: background-color 0.15s, color 0.15s;
+}
+.site-footer .footer-insta:hover { background: #fff; color: var(--color-primary-dark); }
 .footer-nav { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
 .footer-nav a { display: inline-block; padding: 4px 0; }
 .copyright { margin: 32px 0 0; padding-top: 16px; border-top: 1px solid rgba(255, 255, 255, 0.3); font-size: 0.85rem; text-align: center; }
@@ -560,7 +576,7 @@ body { padding-bottom: 76px; }
 
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
-  .news-row, .news-row__toggle::before, .highlight-card, .attach-mark { transition: none; }
+  .news-row, .news-row__toggle::before, .highlight-card, .attach-mark, .header-insta, .footer-insta { transition: none; }
   .highlight-card:hover { transform: none; }
   .page-header__mascot, .hero__mascot { animation: none; }
 }

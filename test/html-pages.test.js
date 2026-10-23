@@ -38,6 +38,14 @@ PAGES.forEach((page) => {
     imgs.forEach((tag) => assert.match(tag, /src="\.\/images\/[a-z0-9-]+\.(jpg|png)"[^>]* alt="/, tag));
   });
 
+  test(`${page}：ヘッダーとフッターに公式Instagramへのリンクがあり、新しいタブで開く`, () => {
+    const html = readPage(page);
+    const links = [...html.matchAll(/<a class="(header-insta|footer-insta)" ([^>]*)>/g)];
+    assert.deepEqual(links.map((m) => m[1]), ['header-insta', 'footer-insta']);
+    links.forEach((m) => assert.equal(m[2], 'href="https://www.instagram.com/miyama_sports/" target="_blank" rel="noopener noreferrer"'));
+    assert.ok(html.indexOf('header-insta') < html.indexOf('</header>') && html.indexOf('footer-insta') > html.indexOf('<footer'));
+  });
+
   test(`${page}：5ページ分のメニューと決められた順のスクリプトを持つ`, () => {
     const html = readPage(page);
     assert.equal((html.match(/data-nav="/g) ?? []).length, 5);
