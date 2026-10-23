@@ -6,8 +6,7 @@ const DEFAULT_CONFIG = Object.freeze({
   address: '岡山県玉野市田井2-4464-10 玉野スポーツセンター内',
   tel: '0863-31-0888',
   telHours: '受付：火～土 9:00～19:00',
-  access: '架空鉄道みどり線「さくら町駅」から徒歩約10分',
-  venue: 'さくら町スポーツセンター（架空）',
+  venue: '玉野スポーツセンター',
   copyrightYear: '2026',
   // 問い合わせフォームの送信先。空なら newsEndpoint の GAS へ送り、どちらも無ければ送信せず完了表示のみ行う（デモ）
   formEndpoint: '',
