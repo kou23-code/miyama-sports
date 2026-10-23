@@ -30,20 +30,21 @@ const ATTACHMENT_UI = Object.freeze({
   file: Object.freeze({ badge: '資料あり', button: '資料を開く', icon: svgIcon('<path d="m21.4 11.1-9.2 9.2a6 6 0 0 1-8.5-8.5l9.2-9.2a4 4 0 0 1 5.7 5.7l-9.2 9.2a2 2 0 0 1-2.8-2.8l8.5-8.5"/>') }),
 });
 
-// 添付があるお知らせの行に付ける「チラシあり」等のバッジ（行全体が開く・移動するリンクなので、バッジ自体はリンクにしない）
-const newsAttachBadgeHtml = (attachment) => {
+// 添付があるお知らせの行で、右端の矢印の左に置く控えめなアイコン（文字はホバー時のツールチップと読み上げ用だけ。
+// 行全体が開く・移動するリンクなので、アイコン自体はリンクにしない）
+const newsAttachMarkHtml = (attachment) => {
   const ui = attachment ? ATTACHMENT_UI[attachment.kind] : null;
-  return ui ? `<span class="attach-badge attach-badge--${attachment.kind}">${ui.icon}${ui.badge}</span>` : '';
+  return ui ? `<span class="attach-mark attach-mark--${attachment.kind}" title="${ui.badge}">${ui.icon}<span class="visually-hidden">（${ui.badge}）</span></span>` : '';
 };
 
-// 一覧の1行：日付・カテゴリ・固定・タイトル・添付ありのバッジ（トップとお知らせ一覧で共通）
+// 一覧の1行：日付・カテゴリ・固定・タイトル・添付ありのアイコン（トップとお知らせ一覧で共通）
 const newsRowHtml = (item, categories) => `
   <span class="news-row__meta">
     <time datetime="${escapeHtml(item.date)}">${escapeHtml(tplDeps.formatDateJa(item.date))}</time>
     <span class="badge badge--${escapeHtml(item.category)}">${escapeHtml(tplDeps.categoryLabel(categories, item.category))}</span>${
   tplDeps.hasNewsOrder(item) ? '<span class="badge badge--pinned">固定</span>' : ''}
   </span>
-  <span class="news-row__title">${escapeHtml(item.title)}</span>${newsAttachBadgeHtml(tplDeps.newsAttachment(item.attachmentUrl))}`;
+  <span class="news-row__title">${escapeHtml(item.title)}</span>${newsAttachMarkHtml(tplDeps.newsAttachment(item.attachmentUrl))}`;
 
 // 添付の画像（チラシ）を本文の幅いっぱいに表示する（クリックで元のファイルを開く。読み込めない場合は app.js が消す）
 const newsFigureHtml = (attachment, title) =>

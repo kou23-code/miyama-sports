@@ -161,7 +161,7 @@ const newsWith = (attachmentUrl) => ({ date: '2026-10-15', category: 'event', ti
 test('本文も添付も無いお知らせは、開かない1行だけにし、添付ありのアイコンも付けない', () => {
   const html = tpl.newsListHtml([newsWith('')], NEWS_CATEGORIES);
   assert.match(html, /<div class="news-row news-row--static">/);
-  assert.doesNotMatch(html, /<details|attach-badge|news-file-button/);
+  assert.doesNotMatch(html, /<details|attach-mark|news-file-button/);
 });
 
 test('本文があるお知らせは、行を押すと本文が開く（改行を保つため段落1つに入れる）', () => {
@@ -175,31 +175,37 @@ test('ドライブの添付は大きな画像（幅1600pxのサムネイル）�
   assert.match(html, /<img class="news-figure__image" src="https:\/\/drive\.google\.com\/thumbnail\?id=abc123&amp;sz=w1600"/);
   assert.match(html, /href="https:\/\/drive\.google\.com\/file\/d\/abc123\/view\?usp=sharing" target="_blank" rel="noopener noreferrer">/);
   assert.match(html, /<\/svg>チラシを開く<span class="visually-hidden">（体験会&lt;案内&gt;・新しいタブで開きます）/);
-  assert.match(html, /<span class="attach-badge attach-badge--flyer"><svg class="attach-icon"[^>]*aria-hidden="true"[^>]*>[\s\S]*?<\/svg>チラシあり<\/span>/);
+  assert.match(html, /<span class="attach-mark attach-mark--flyer" title="チラシあり"><svg class="attach-icon"[^>]*aria-hidden="true"[^>]*>[\s\S]*?<\/svg><span class="visually-hidden">（チラシあり）<\/span><\/span>/);
 });
 
-test('PDF の添付は「PDFあり」バッジと「PDFを開く」ボタンを表示し、画像は付けない', () => {
+test('PDF の添付は「PDFあり」のアイコンと「PDFを開く」ボタンを表示し、画像は付けない', () => {
   const html = tpl.newsListHtml([newsWith('https://example.com/guide.pdf')], NEWS_CATEGORIES);
-  assert.match(html, /class="attach-badge attach-badge--pdf">[\s\S]*?<\/svg>PDFあり<\/span>/);
+  assert.match(html, /class="attach-mark attach-mark--pdf" title="PDFあり">[\s\S]*?<\/svg><span class="visually-hidden">（PDFあり）<\/span>/);
   assert.match(html, /class="button button--primary news-file-button"[^>]*>\s*<svg class="attach-icon"[\s\S]*?<\/svg>PDFを開く/);
   assert.doesNotMatch(html, /<img|news-figure/);
 });
 
-test('画像・PDF 以外の添付は「資料あり」バッジと「資料を開く」ボタンを表示する', () => {
+test('画像・PDF 以外の添付は「資料あり」のアイコンと「資料を開く」ボタンを表示する', () => {
   const html = tpl.newsListHtml([newsWith('https://docs.google.com/document/d/x/edit')], NEWS_CATEGORIES);
-  assert.match(html, /attach-badge--file">[\s\S]*?<\/svg>資料あり<\/span>/);
+  assert.match(html, /attach-mark--file" title="資料あり">[\s\S]*?<\/svg><span class="visually-hidden">（資料あり）<\/span>/);
   assert.match(html, /<\/svg>資料を開く/);
 });
 
-test('トップの最新お知らせ（リンクの行）にも添付のバッジを付け、バッジ自体はリンクにしない', () => {
+test('一覧の行には「チラシあり」等の文字を見える形では出さない（ツールチップと読み上げ用のみ）', () => {
+  const html = tpl.newsListHtml([newsWith('https://example.com/flyer.png')], NEWS_CATEGORIES);
+  const row = html.slice(html.indexOf('<summary'), html.indexOf('</summary>'));
+  assert.equal(row.replace(/<span class="visually-hidden">[^<]*<\/span>|title="[^"]*"/g, '').includes('チラシあり'), false);
+});
+
+test('トップの最新お知らせ（リンクの行）にも添付のアイコンを付け、矢印の直前に置き、アイコン自体はリンクにしない', () => {
   const html = tpl.newsLinkListHtml([newsWith('https://example.com/flyer.jpg')], NEWS_CATEGORIES);
-  assert.match(html, /<a class="news-row" href="\.\/news\.html#[^"]+">[\s\S]*attach-badge--flyer[\s\S]*<\/a>/);
+  assert.match(html, /<a class="news-row" href="\.\/news\.html#[^"]+">[\s\S]*attach-mark--flyer[\s\S]*?<\/span><\/span><span class="news-row__arrow"[\s\S]*<\/a>/);
   assert.equal((html.match(/<a /g) ?? []).length, 1);
 });
 
-test('https 以外の添付URLはリンクにせず、バッジも付けない', () => {
+test('https 以外の添付URLはリンクにせず、アイコンも付けない', () => {
   ['javascript:alert(1)', 'http://example.com/a.png'].forEach((url) =>
-    assert.doesNotMatch(tpl.newsListHtml([newsWith(url)], NEWS_CATEGORIES), /news-file-button|attach-badge|javascript:/, url));
+    assert.doesNotMatch(tpl.newsListHtml([newsWith(url)], NEWS_CATEGORIES), /news-file-button|attach-mark|javascript:/, url));
 });
 
 test('固定順位があるお知らせには「固定」バッジを付ける', () => {

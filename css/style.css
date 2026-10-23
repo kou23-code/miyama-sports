@@ -18,6 +18,7 @@
   --color-text: #1f2d24;
   --color-muted: #4b5e51;
   --color-border: #cfe2c8;
+  --color-attach: #748a7b;
   --color-error: #b42318;
   --color-error-soft: #fdecea;
   --color-focus: #f59e0b;
@@ -197,19 +198,16 @@ p { margin: 0 0 1em; }
 .news-row__meta { grid-area: meta; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; color: var(--color-muted); font-size: 0.9rem; }
 .news-row__meta time { font-variant-numeric: tabular-nums; }
 .news-row__title { grid-area: title; min-width: 0; font-weight: 700; line-height: 1.6; overflow-wrap: anywhere; }
-/* 添付ありのバッジ：スマホではタイトルの下、広い画面ではタイトルの右に置く。種類ごとに色を変える */
-.attach-badge {
-  grid-area: clip; justify-self: start; display: inline-flex; align-items: center; gap: 5px; padding: 3px 12px 3px 9px;
-  --badge-color: var(--color-accent-dark); --badge-soft: #fff1e6;
-  border: 1.5px solid var(--badge-color); border-radius: 999px; background: var(--badge-soft); color: var(--badge-color);
-  font-size: 0.82rem; font-weight: 700; line-height: 1.5; white-space: nowrap; transition: background-color 0.15s, color 0.15s;
+/* 添付ありのアイコン：右端の矢印のすぐ左に、薄いグレーグリーンで控えめに置く（スマホでも同じ位置） */
+.attach-mark {
+  grid-area: clip; display: grid; place-items: center; width: 28px; height: 28px; margin-right: -4px;
+  color: var(--color-attach); transition: color 0.15s;
 }
-.attach-badge--pdf { --badge-color: var(--color-error); --badge-soft: var(--color-error-soft); }
-.attach-badge--file { --badge-color: var(--color-primary-dark); --badge-soft: var(--color-primary-soft); }
+.attach-mark .attach-icon { width: 20px; height: 20px; }
 .attach-icon { flex: none; width: 1.15em; height: 1.15em; }
-/* 行にカーソルを乗せた・開いたときは塗りつぶして「押せる」ことを伝える */
-.news-row:hover .attach-badge, .news-entry[open] .attach-badge { background: var(--badge-color); color: #fff; }
-.news-row:has(.attach-badge) { grid-template-areas: "meta side" "title side" "clip side"; }
+/* 行にカーソルを乗せた・開いたときは、矢印と同じテーマカラーに変えて「押せる」ことを伝える */
+.news-row:hover .attach-mark, .news-entry[open] .attach-mark { color: var(--color-primary); }
+.news-row:has(.attach-mark) { grid-template-columns: 1fr auto auto; grid-template-areas: "meta meta side" "title clip side"; }
 .news-file-button .attach-icon { width: 1.3em; height: 1.3em; }
 .news-row__toggle, .news-row__arrow { grid-area: side; display: grid; place-items: center; width: 32px; height: 32px; border-radius: 50%; background: var(--color-primary-soft); color: var(--color-primary-dark); font-weight: 700; }
 .news-row__toggle::before { content: ""; width: 8px; height: 8px; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: translateY(-2px) rotate(45deg); transition: transform 0.2s; }
@@ -230,9 +228,8 @@ p { margin: 0 0 1em; }
 .badge--pinned::before { content: "📌 "; content: "📌 " / ""; }
 
 @media (min-width: 720px) {
-  .news-row, .news-row:has(.attach-badge) { grid-template-columns: auto 1fr auto auto; grid-template-areas: "meta title clip side"; gap: 12px 20px; padding: 18px 28px; }
+  .news-row, .news-row:has(.attach-mark) { grid-template-columns: auto 1fr auto auto; grid-template-areas: "meta title clip side"; gap: 12px 20px; padding: 18px 28px; }
   .news-row__meta { flex-wrap: nowrap; white-space: nowrap; }
-  .attach-badge { justify-self: end; }
   .news-detail { padding: 28px 40px 36px; }
   .news-detail__body, .news-figure { max-width: 760px; margin-inline: auto; }
   .news-detail__body { margin-bottom: 24px; }
@@ -563,7 +560,7 @@ body { padding-bottom: 76px; }
 
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
-  .news-row, .news-row__toggle::before, .highlight-card, .attach-badge { transition: none; }
+  .news-row, .news-row__toggle::before, .highlight-card, .attach-mark { transition: none; }
   .highlight-card:hover { transform: none; }
   .page-header__mascot, .hero__mascot { animation: none; }
 }
