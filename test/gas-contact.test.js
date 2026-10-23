@@ -1,0 +1,344 @@
+// 問い合わせフォームの受付（gas/contact-form.js・gas/contact-api.js と doPost の振り分け）を、GASのサービスを偽物に差し替えた実行環境で検証する
+const { test } = require('node:test');
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
+const vm = require('node:vm');
+const { inquiryRequestBody, FORM_FIELDS } = require('../js/lib/form-validate.js');
+
+const ROOT = path.join(__dirname, '..');
+// GAS に貼り付けるファイル一式（js/lib/form-validate.js は「contact-validate」としてサイトと共用する）
+const GAS_FILES = [
+  'js/lib/form-validate.js', 'gas/news-sheet.js', 'gas/news-admin.js', 'gas/contact-form.js', 'gas/contact-api.js', 'gas/news-api.js',
+];
+const RECEIVED_AT = '2026-10-23 10:00:00';
+const FAR_DATE = '2099-01-10';
+
+const trialValues = {
+  inquiryType: 'trial', classId: 'play', preferredDate: FAR_DATE, guardianName: '架空 花子', participantName: '架空 太郎',
+  schoolName: '架空小学校', grade: 'es3', age: '8', name: '', email: 'hanako@example.com', tel: '000-000-0000',
+  message: 'よろしくお願いします', agree: 'on',
+};
+const generalValues = {
+  inquiryType: 'general', name: '架空 一郎', email: 'ichiro@example.com', tel: '000-000-0000', message: '駐車場はありますか', agree: 'on',
+};
+
+// 範囲の操作を記録するだけの偽のセル範囲
+const fakeRange = (record, a1) => {
+  const range = {
+    setValues: (values) => record.ranges.push(['setValues', a1, values]) && range,
+    setFontWeight: () => range,
+    setNumberFormat: (format) => record.ranges.push(['setNumberFormat', a1, format]) && range,
+  };
+  return range;
+};
+
+const fakeSheet = (record, name) => ({
+  rows: [],
+  appendRow(values) { this.rows.push(values); },
+  getRange: (...args) => fakeRange(record, args.join(',')),
+  setFrozenRows: () => {},
+  name,
+});
+
+// シート「名前」を作成・取得できる偽のスプレッドシート
+const fakeBook = (record) => ({
+  getSheetByName: (name) => record.sheets.get(name) ?? null,
+  insertSheet: (name) => record.sheets.set(name, fakeSheet(record, name)).get(name),
+});
+
+// 時刻・プロパティ・キャッシュ・ロック・応答の偽物
+const fakeServices = (record, cache, props) => ({
+  Session: { getScriptTimeZone: () => 'Asia/Tokyo' },
+  Utilities: { formatDate: () => RECEIVED_AT },
+  PropertiesService: { getScriptProperties: () => ({ getProperty: (k) => props.get(k) ?? null }) },
+  CacheService: { getScriptCache: () => ({ get: (k) => cache.get(k) ?? null, put: (k, v) => cache.set(k, v), remove: (k) => cache.delete(k) }) },
+  LockService: { getScriptLock: () => ({ waitLock: () => record.locks.push('wait'), releaseLock: () => record.locks.push('release') }) },
+  ContentService: { MimeType: { JSON: 'json' }, createTextOutput: (text) => ({ text, setMimeType: (type) => ({ text, type }) }) },
+});
+
+// シートの作成・追記、メール、キャッシュ、ロックを記録する偽の GAS サービス
+const fakeGas = (props) => {
+  const record = { sheets: new Map(), mails: [], ranges: [], locks: [] };
+  const cache = new Map();
+  return {
+    record, cache, console: { error: () => {} }, ...fakeServices(record, cache, props),
+    SpreadsheetApp: { getActiveSpreadsheet: () => fakeBook(record) },
+    MailApp: { sendEmail: (message) => record.mails.push(message) },
+  };
+};
+
+const loadGas = (props = new Map([['ADMIN_PASSWORD', 'secret']])) => {
+  const context = vm.createContext(fakeGas(props));
+  GAS_FILES.forEach((file) => vm.runInContext(fs.readFileSync(path.join(ROOT, file), 'utf8'), context, { filename: file }));
+  return context;
+};
+
+// サイトと同じ形の本文で doPost を呼ぶ
+const postRaw = (context, contents) =>
+  JSON.parse(vm.runInContext(`doPost(${JSON.stringify({ postData: { contents } })})`, context).text);
+const postContact = (context, values, classLabel = '') => postRaw(context, inquiryRequestBody(values, classLabel));
+const contactRows = (context) => context.record.sheets.get('お問い合わせ')?.rows ?? [];
+
+test('体験申込を受け付けると「お問い合わせ」シートを見出し付きで作り、全項目を1行追記する', () => {
+  const context = loadGas();
+  assert.deepEqual(postContact(context, trialValues, '運動あそび教室'), { ok: true });
+  assert.deepEqual(JSON.parse(JSON.stringify(context.record.ranges[0])), ['setValues', '1,1,1,14', [[
+    '受付日時', '種別', '希望教室', '希望日', '保護者名', '参加者のお名前', '学校名', '学年', '年齢',
+    'お名前', 'メールアドレス', '電話番号', 'お問い合わせ内容', '対応状況',
+  ]]]);
+  assert.deepEqual(contactRows(context).map((row) => [...row]), [[
+    RECEIVED_AT, '体験申込', '運動あそび教室', FAR_DATE, '架空 花子', '架空 太郎', '架空小学校', '小学3年', '8歳',
+    '', 'hanako@example.com', '000-000-0000', 'よろしくお願いします', '未対応',
+  ]]);
+  assert.deepEqual(context.record.locks, ['wait', 'release']);
+});
+
+test('電話番号の先頭の0などが消えないよう、作成したシートは書式なしテキストにする', () => {
+  const context = loadGas();
+  postContact(context, trialValues);
+  assert.ok(context.record.ranges.some(([op, , format]) => op === 'setNumberFormat' && format === '@'));
+});
+
+test('一般的なお問い合わせは、体験専用の列を空欄にして追記する（2件目以降は同じシートに追記）', () => {
+  const context = loadGas();
+  postContact(context, trialValues);
+  postContact(context, { ...generalValues, preferredDate: '2026-10-01', guardianName: '送られても書かない' });
+  assert.deepEqual([...contactRows(context)[1]], [
+    RECEIVED_AT, '一般的なお問い合わせ', '', '', '', '', '', '', '', '架空 一郎', 'ichiro@example.com', '000-000-0000', '駐車場はありますか', '未対応',
+  ]);
+  assert.equal(context.record.ranges.filter(([op]) => op === 'setValues').length, 1);
+});
+
+test('通知メールは、宛先・件名・全項目を記載した本文・返信先（送信者）で送る', () => {
+  const context = loadGas(new Map([['CONTACT_NOTIFY_EMAIL', 'staff@example.com']]));
+  postContact(context, trialValues, '運動あそび教室');
+  const [mail] = context.record.mails;
+  assert.deepEqual([mail.to, mail.subject, mail.replyTo], ['staff@example.com', '【ホームページ】体験申込：架空 花子 様', 'hanako@example.com']);
+  ['■種別\n体験申込', '■希望教室\n運動あそび教室', `■希望日\n${FAR_DATE}`, '■保護者名\n架空 花子', '■参加者のお名前\n架空 太郎',
+    '■学校名\n架空小学校', '■学年\n小学3年', '■年齢\n8歳', '■メールアドレス\nhanako@example.com', '■電話番号\n000-000-0000',
+    '■お問い合わせ内容\nよろしくお願いします', `受付日時：${RECEIVED_AT}`].forEach((text) => assert.ok(mail.body.includes(text), text));
+  assert.equal(mail.body.includes('■お名前'), false);
+});
+
+test('一般的なお問い合わせのメールは、お名前・連絡先・内容だけを記載する', () => {
+  const context = loadGas();
+  postContact(context, generalValues);
+  const [mail] = context.record.mails;
+  assert.equal(mail.subject, '【ホームページ】一般的なお問い合わせ：架空 一郎 様');
+  assert.deepEqual(mail.body.match(/^■.+$/gm), ['■種別', '■お名前', '■メールアドレス', '■電話番号', '■お問い合わせ内容']);
+});
+
+test('通知先がスクリプト プロパティに未登録なら、仮置きのダミーアドレス宛てにする', () => {
+  const context = loadGas(new Map());
+  postContact(context, generalValues);
+  assert.equal(context.record.mails[0].to, 'admin@example.com');
+});
+
+test('入力に誤りがあれば、シートにもメールにも出さずに誤りを返す（サイトと同じ検証ルール）', () => {
+  const context = loadGas();
+  const result = postContact(context, { ...trialValues, guardianName: '', tel: '123', preferredDate: '2020-01-01' });
+  assert.equal(result.ok, false);
+  assert.deepEqual(result.errors.length, 3);
+  assert.deepEqual([contactRows(context).length, context.record.mails.length], [0, 0]);
+});
+
+test('GAS では希望日の下限に1日の猶予を持たせる（今日は不可、明日は可。端末との時差・日付またぎ対策）', () => {
+  const toIso = (offset) => vm.runInContext(`toIsoDate(new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate() + ${offset}))`, loadGas());
+  assert.equal(postContact(loadGas(), { ...trialValues, preferredDate: toIso(0) }).ok, false);
+  assert.equal(postContact(loadGas(), { ...trialValues, preferredDate: toIso(1) }).ok, true);
+});
+
+test('教室IDの形が不正なら受け付けない（教室の一覧はサイト側にしかないため形だけ確かめる）', () => {
+  assert.equal(postContact(loadGas(), { ...trialValues, classId: '<script>' }).ok, false);
+});
+
+test('先頭が = + - @ の入力は数式として実行されないよう先頭に \' を付けて書く', () => {
+  const context = loadGas();
+  postContact(context, { ...generalValues, name: '=HYPERLINK("x")', message: '+1' });
+  const row = contactRows(context)[0];
+  assert.deepEqual([row[9], row[12]], ['\'=HYPERLINK("x")', '\'+1']);
+});
+
+test('希望教室の表示名が届かなければ教室IDを書き、長すぎる表示名は100文字で切る', () => {
+  const context = loadGas();
+  postContact(context, trialValues, '');
+  postContact(context, trialValues, 'あ'.repeat(150));
+  assert.deepEqual(contactRows(context).map((row) => row[2].length), ['play'.length, 100]);
+});
+
+test('メールが送れなくても（送信上限など）、シートに保存済みのため成功を返す', () => {
+  const context = loadGas();
+  vm.runInContext("MailApp.sendEmail = () => { throw new Error('Service invoked too many times'); };", context);
+  assert.deepEqual(postContact(context, generalValues), { ok: true });
+  assert.equal(contactRows(context).length, 1);
+});
+
+// ---- 送信者への自動返信メール ----
+
+const replyMailOf = (context) => context.record.mails.find((mail) => mail.subject.startsWith('【自動送信】'));
+
+test('受付時に、通知メールに続けて送信者のメールアドレス宛てに自動返信を送る', () => {
+  const context = loadGas(new Map([['CONTACT_NOTIFY_EMAIL', 'staff@example.com']]));
+  postContact(context, trialValues, '運動あそび教室');
+  assert.deepEqual(context.record.mails.map((mail) => mail.to), ['staff@example.com', 'hanako@example.com']);
+  const reply = replyMailOf(context);
+  assert.deepEqual([reply.subject, reply.replyTo, reply.name],
+    ['【自動送信】お問い合わせ・体験申込を受け付けました', undefined, 'ホームページ お問い合わせフォーム']);
+});
+
+test('自動返信の本文は、宛名・挨拶文のあとに入力内容の控えと受付日時を記載する', () => {
+  const context = loadGas();
+  postContact(context, trialValues, '運動あそび教室');
+  const lines = replyMailOf(context).body.split('\n');
+  assert.deepEqual(lines.slice(0, 4), [
+    '架空 花子 様', '', 'このたびはお問い合わせいただき、誠にありがとうございます。',
+    '以下の内容でお問い合わせを受け付けました。担当者より順次ご連絡いたします。',
+  ]);
+  const body = lines.join('\n');
+  ['【お問い合わせ内容の控え】', '■種別\n体験申込', '■希望教室\n運動あそび教室', `■希望日\n${FAR_DATE}`, '■参加者のお名前\n架空 太郎',
+    '■学年\n小学3年', '■年齢\n8歳', '■電話番号\n000-000-0000', '■お問い合わせ内容\nよろしくお願いします', `受付日時：${RECEIVED_AT}`,
+    '※前日・当日のご予約や、お急ぎのご連絡は、必ずお電話にてお願いいたします。'].forEach((text) => assert.ok(body.includes(text), text));
+  assert.ok(body.indexOf('このたびは') < body.indexOf('【お問い合わせ内容の控え】'), '挨拶文は控えより上');
+});
+
+test('一般的なお問い合わせの自動返信は、お名前で宛名を書き、体験の項目を含めない', () => {
+  const context = loadGas();
+  postContact(context, generalValues);
+  const reply = replyMailOf(context);
+  assert.equal(reply.to, 'ichiro@example.com');
+  assert.ok(reply.body.startsWith('架空 一郎 様\n'));
+  assert.deepEqual(reply.body.match(/^■.+$/gm), ['■種別', '■お名前', '■メールアドレス', '■電話番号', '■お問い合わせ内容']);
+});
+
+test('自動返信の署名はスクリプト プロパティ CONTACT_REPLY_SIGNATURE から付け（\\n は改行）、未登録なら付けない', () => {
+  const signed = loadGas(new Map([['CONTACT_REPLY_SIGNATURE', '架空クラブ\\n電話 000-000-0000']]));
+  postContact(signed, generalValues);
+  assert.ok(replyMailOf(signed).body.endsWith('\n\n架空クラブ\n電話 000-000-0000'));
+  const unsigned = loadGas(new Map());
+  postContact(unsigned, generalValues);
+  assert.ok(replyMailOf(unsigned).body.endsWith('お手数ですがこのメールを破棄してください。'));
+});
+
+test('通知メールが送れなくても自動返信は送り、自動返信が送れなくても通知メールは送る', () => {
+  const failFor = (to) => `MailApp.sendEmail = (mail) => { if (mail.to === '${to}') throw new Error('送信失敗'); record.mails.push(mail); };`;
+  const notifyFails = loadGas(new Map([['CONTACT_NOTIFY_EMAIL', 'staff@example.com']]));
+  vm.runInContext(failFor('staff@example.com'), notifyFails);
+  assert.deepEqual([postContact(notifyFails, generalValues).ok, notifyFails.record.mails.map((m) => m.to)], [true, ['ichiro@example.com']]);
+  const replyFails = loadGas(new Map([['CONTACT_NOTIFY_EMAIL', 'staff@example.com']]));
+  vm.runInContext(failFor('ichiro@example.com'), replyFails);
+  assert.deepEqual([postContact(replyFails, generalValues).ok, replyFails.record.mails.map((m) => m.to)], [true, ['staff@example.com']]);
+});
+
+test('10分間に20件を超える送信は受け付けない（メールの上限を使い切らないため）', () => {
+  const context = loadGas();
+  Array.from({ length: 20 }).forEach(() => postContact(context, generalValues));
+  const result = postContact(context, generalValues);
+  assert.deepEqual([result.ok, /お電話/.test(result.errors[0]), contactRows(context).length], [false, true, 20]);
+});
+
+test('シートへの書き込みで例外が起きたら、一般公開のフォームには例外の詳細（detail）を返さない', () => {
+  const context = loadGas();
+  vm.runInContext("SpreadsheetApp.getActiveSpreadsheet = () => { throw new Error('内部の詳細'); };", context);
+  const result = postContact(context, generalValues);
+  assert.deepEqual(result, { ok: false, errors: ['送信できませんでした。お手数ですがお電話でお問い合わせください'] });
+});
+
+// ---- doPost の振り分け ----
+
+test('action が contact の POST はパスワード不要で受け付け、管理画面の操作には振り分けない', () => {
+  const context = loadGas();
+  assert.deepEqual(postContact(context, generalValues), { ok: true });
+  assert.equal(context.cache.has('news-admin-login-fail'), false);
+});
+
+test('お知らせ管理の POST は従来どおりパスワードで認証し、問い合わせ処理には振り分けない', () => {
+  const context = loadGas();
+  assert.deepEqual(postRaw(context, JSON.stringify({ action: 'login', password: 'secret' })), { ok: true });
+  assert.equal(postRaw(context, JSON.stringify({ action: 'login', password: 'x' })).auth, false);
+  assert.deepEqual(postRaw(context, JSON.stringify({ action: 'list', data: generalValues })).auth, false);
+  assert.deepEqual([contactRows(context).length, context.record.mails.length], [0, 0]);
+});
+
+test('管理画面の操作で例外が起きたときは、従来どおり detail を返す', () => {
+  const context = loadGas();
+  vm.runInContext("LockService.getScriptLock = () => { throw new Error('ロック取得失敗'); };", context);
+  const input = { date: '2026-10-22', category: 'info', title: 't', body: '', attachmentUrl: '', published: true };
+  vm.runInContext("SpreadsheetApp.getActiveSpreadsheet = () => ({ getSheetByName: () => ({ getDataRange: () => ({ getValues: () => [[]] }) }) });", context);
+  assert.equal(postRaw(context, JSON.stringify({ action: 'create', password: 'secret', data: input })).detail, 'Error: ロック取得失敗');
+});
+
+// ---- サイトと GAS の整合性 ----
+
+test('シート・メールの項目は、サイトのフォームの全項目（同意を除く）と一致している', () => {
+  const labels = vm.runInContext('Object.keys(CONTACT_FIELD_LABELS)', loadGas());
+  assert.deepEqual([...labels], FORM_FIELDS.filter((field) => field !== 'agree'));
+});
+
+// ---- メール送信の権限の承認用 ----
+
+test('authMail は残り送信可能数を読むだけで、メールは送らない（GASエディタで権限を承認するための関数）', () => {
+  const context = loadGas();
+  vm.runInContext('MailApp.getRemainingDailyQuota = () => { record.quotaChecked = true; return 100; };', context);
+  vm.runInContext('authMail()', context);
+  assert.deepEqual([context.record.quotaChecked, context.record.mails.length], [true, 0]);
+});
+
+// ---- 自動返信が届かないときの切り分け（宛先の確認・古いファイルの検出） ----
+
+// 自動返信に対応する前の contact-form（自動返信の節が無い版）を貼った GAS を再現する
+const OLD_CONTACT_FORM = (source) => source.split('// ---- 送信者への自動返信メール ----')[0];
+
+const loadGasWith = (props, transform) => {
+  const context = vm.createContext(fakeGas(props));
+  GAS_FILES.forEach((file) => vm.runInContext(transform(file, fs.readFileSync(path.join(ROOT, file), 'utf8')), context, { filename: file }));
+  vm.runInContext('record.logs = []; console.error = (m) => record.logs.push(m); console.warn = (m) => record.logs.push(m); console.log = (m) => record.logs.push(m);', context);
+  return context;
+};
+const NOTIFY_PROPS = () => new Map([['CONTACT_NOTIFY_EMAIL', 'staff@example.com']]);
+
+test('フォームの name="email"（送信本文の data.email）が、そのまま自動返信の宛先になる', () => {
+  const html = fs.readFileSync(path.join(ROOT, 'contact.html'), 'utf8');
+  assert.match(html, /<input type="email" id="email" name="email"/);
+  const sent = JSON.parse(inquiryRequestBody(generalValues, ''));
+  const context = loadGas();
+  assert.equal(vm.runInContext(`contactReplyAddress(${JSON.stringify(sent.data)})`, context), 'ichiro@example.com');
+});
+
+test('自動返信の宛先は、メールアドレスの形のときだけ取り出す（空・不正なら空文字＝送らない）', () => {
+  const context = loadGas();
+  const address = (values) => vm.runInContext(`contactReplyAddress(${JSON.stringify(values)})`, context);
+  assert.deepEqual([address({ email: ' a@example.com ' }), address({ email: '' }), address({ email: 'abc' }), address({})],
+    ['a@example.com', '', '', '']);
+});
+
+test('宛先が取れなければ自動返信は送らずに記録だけ残し、通知メールと受付は止めない', () => {
+  const context = loadGasWith(NOTIFY_PROPS(), (file, source) => source);
+  vm.runInContext("saveContact({ inquiryType: 'general', name: '架空 一郎', email: '', tel: '000-000-0000', message: 'x' })", context);
+  assert.deepEqual(context.record.mails.map((mail) => mail.to), ['staff@example.com']);
+  assert.match(context.record.logs.join('\n'), /自動返信メールの宛先.*送信しませんでした/);
+});
+
+test('contact-form が古いままでも受付は成功し、自動返信だけ送れない原因（例外の種類とメッセージ）を記録する', () => {
+  const context = loadGasWith(NOTIFY_PROPS(), (file, source) => (file === 'gas/contact-form.js' ? OLD_CONTACT_FORM(source) : source));
+  assert.deepEqual(postContact(context, generalValues), { ok: true });
+  assert.deepEqual([contactRows(context).length, context.record.mails.map((mail) => mail.to)], [1, ['staff@example.com']]);
+  assert.match(context.record.logs.join('\n'), /自動返信メールを送れませんでした（内容はシートに保存済み）：ReferenceError: contactReplyAddress is not defined/);
+});
+
+test('checkContactSetup は、ファイルと通知先がそろっていれば問題なしと出し、メールは送らない', () => {
+  const context = loadGasWith(NOTIFY_PROPS(), (file, source) => source);
+  vm.runInContext('MailApp.getRemainingDailyQuota = () => 98;', context);
+  assert.deepEqual([...vm.runInContext('checkContactSetup()', context)], []);
+  assert.deepEqual([...context.record.logs], ['問い合わせの受付に必要なファイル・設定はそろっています', '今日あと送れるメールの通数：98']);
+  assert.equal(context.record.mails.length, 0);
+});
+
+test('checkContactSetup は、古い contact-form と未登録の通知先を「要対応」として知らせる', () => {
+  const context = loadGasWith(new Map(), (file, source) => (file === 'gas/contact-form.js' ? OLD_CONTACT_FORM(source) : source));
+  vm.runInContext('MailApp.getRemainingDailyQuota = () => 100;', context);
+  const problems = [...vm.runInContext('checkContactSetup()', context)];
+  assert.equal(problems.length, 2);
+  assert.match(problems[0], /「contact-form」が自動返信に対応していない古い版/);
+  assert.match(problems[1], /CONTACT_NOTIFY_EMAIL が未登録/);
+});

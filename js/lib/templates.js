@@ -1,0 +1,230 @@
+// 画面に差し込むHTML文字列を生成する純粋関数群（DOMには触れない）
+
+// ブラウザでは先に読み込んだ各スクリプトのグローバル関数、Node.js では require で取得する
+const tplDeps = typeof module === 'object' && module.exports
+  ? { ...require('./news-logic.js'), ...require('./class-logic.js'), ...require('./form-validate.js') }
+  : {
+    formatDateJa, categoryLabel, newsAttachment, hasNewsOrder, newsAnchorId, classDisplayName, ageLabels, inquiryTypeLabel, gradeLabel, fieldsForType,
+    classMainRows, classFeeRows, sessionRows, sessionHeading, classTargetSummary, hasMultipleSessions,
+    feeSystemRows, insuranceTitle, insuranceRows, insuranceRangeText, classFeeRangeText,
+  };
+
+const HTML_ESCAPES = Object.freeze({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' });
+
+// HTML特殊文字をエスケープする
+const escapeHtml = (value) => String(value ?? '').replace(/[&<>"']/g, (char) => HTML_ESCAPES[char]);
+
+// ---- お知らせ ----
+
+const NEW_TAB_ATTRS = 'target="_blank" rel="noopener noreferrer"';
+
+const NEWS_EMPTY_HTML = '<li class="empty-message">該当するお知らせはありません。</li>';
+
+// 一覧の1行：日付・カテゴリ・固定・タイトル・添付ありのアイコン（トップとお知らせ一覧で共通）
+const newsRowHtml = (item, categories) => `
+  <span class="news-row__meta">
+    <time datetime="${escapeHtml(item.date)}">${escapeHtml(tplDeps.formatDateJa(item.date))}</time>
+    <span class="badge badge--${escapeHtml(item.category)}">${escapeHtml(tplDeps.categoryLabel(categories, item.category))}</span>${
+  tplDeps.hasNewsOrder(item) ? '<span class="badge badge--pinned">固定</span>' : ''}
+  </span>
+  <span class="news-row__title">${escapeHtml(item.title)}</span>${
+  tplDeps.newsAttachment(item.attachmentUrl) ? '<span class="news-row__clip" role="img" aria-label="添付ファイルあり">📎</span>' : ''}`;
+
+// 添付の画像（チラシ）を本文の幅いっぱいに表示する（クリックで元のファイルを開く。読み込めない場合は app.js が消す）
+const newsFigureHtml = (attachment, title) =>
+  attachment.previewSrc ? `
+    <figure class="news-figure"><a href="${escapeHtml(attachment.href)}" ${NEW_TAB_ATTRS} tabindex="-1" aria-hidden="true">
+      <img class="news-figure__image" src="${escapeHtml(attachment.previewSrc)}" alt="${escapeHtml(title)}の添付画像" loading="lazy" referrerpolicy="no-referrer"></a>
+    </figure>` : '';
+
+// 添付ファイルがあるお知らせだけ、大きな画像と大きな「ファイルを開く」ボタンを付ける
+const newsAttachmentHtml = (item) => {
+  const attachment = tplDeps.newsAttachment(item.attachmentUrl);
+  return attachment ? `${newsFigureHtml(attachment, item.title)}
+    <a class="button button--primary news-file-button" href="${escapeHtml(attachment.href)}" ${NEW_TAB_ATTRS}>
+      <span aria-hidden="true">📄</span>ファイルを開く<span class="visually-hidden">（${escapeHtml(item.title)}・新しいタブで開きます）</span></a>` : '';
+};
+
+// 行を押すと、その下に本文と添付が記事のように開く（本文も添付も無いお知らせは開かない1行だけにする）
+const newsEntryHtml = (item, categories) => {
+  const detail = `${item.body ? `<p class="news-detail__body">${escapeHtml(item.body)}</p>` : ''}${newsAttachmentHtml(item)}`;
+  return detail ? `
+    <details class="news-entry">
+      <summary class="news-row">${newsRowHtml(item, categories)}<span class="news-row__toggle" aria-hidden="true"></span></summary>
+      <div class="news-detail">${detail}</div>
+    </details>` : `<div class="news-row news-row--static">${newsRowHtml(item, categories)}</div>`;
+};
+
+const newsItemHtml = (item, categories) => `
+  <li class="news-item" id="${escapeHtml(tplDeps.newsAnchorId(item))}">${newsEntryHtml(item, categories)}
+  </li>`;
+
+const newsListHtml = (news, categories) =>
+  news.length === 0 ? NEWS_EMPTY_HTML : news.map((item) => newsItemHtml(item, categories)).join('');
+
+// トップの最新お知らせ：1行ずつ、お知らせ一覧の該当記事（開いた状態）へのリンクにする
+const newsLinkItemHtml = (item, categories) => `
+  <li class="news-item">
+    <a class="news-row" href="./news.html#${encodeURIComponent(tplDeps.newsAnchorId(item))}">${newsRowHtml(item, categories)}<span class="news-row__arrow" aria-hidden="true">›</span></a>
+  </li>`;
+
+const newsLinkListHtml = (news, categories) =>
+  news.length === 0 ? NEWS_EMPTY_HTML : news.map((item) => newsLinkItemHtml(item, categories)).join('');
+
+// ---- 絞り込みボタン ----
+
+const filterButtonHtml = (option, activeId) => `
+  <button type="button" class="filter-button" data-filter="${escapeHtml(option.id)}"
+    aria-pressed="${option.id === activeId}">${escapeHtml(option.label)}</button>`;
+
+const filterButtonsHtml = (options, activeId, allLabel) =>
+  [{ id: 'all', label: allLabel }, ...options].map((option) => filterButtonHtml(option, activeId)).join('');
+
+// ---- 教室 ----
+
+const ageBadgesHtml = (ageGroups, ageIds) =>
+  tplDeps.ageLabels(ageGroups, ageIds).map((label) => `<span class="badge badge--age">${escapeHtml(label)}</span>`).join('');
+
+// [項目名, 値] の配列を定義リストにする
+const detailRowsHtml = (rows, modifier) => `
+  <dl class="class-card__details${modifier ? ` class-card__details--${modifier}` : ''}">${rows.map(([label, value]) =>
+    `<div><dt>${escapeHtml(label)}</dt><dd>${escapeHtml(value)}</dd></div>`).join('')}</dl>`;
+
+const sessionHtml = (session) => `
+  <li class="class-session">
+    <p class="class-session__title">${escapeHtml(tplDeps.sessionHeading(session))}</p>
+    ${detailRowsHtml(tplDeps.sessionRows(session), 'session')}
+  </li>`;
+
+// 複数クラスに分かれる教室だけ、クラスごとの時間・定員を並べる
+const sessionsHtml = (item) =>
+  tplDeps.hasMultipleSessions(item)
+    ? `<ul class="class-card__sessions" aria-label="クラス別の時間・定員">${item.sessions.map(sessionHtml).join('')}</ul>` : '';
+
+const classCardHtml = (item, ageGroups) => `
+  <article class="class-card" id="${escapeHtml(item.id)}">
+    <h3 class="class-card__title"><span class="class-card__icon" aria-hidden="true">${escapeHtml(item.icon)}</span>${escapeHtml(tplDeps.classDisplayName(item))}</h3>
+    <div class="class-card__ages">${ageBadgesHtml(ageGroups, item.ages)}</div>
+    <p class="class-card__summary">${escapeHtml(item.summary)}</p>
+    ${detailRowsHtml(tplDeps.classMainRows(item))}${sessionsHtml(item)}${detailRowsHtml(tplDeps.classFeeRows(item), 'fee')}
+    <a class="button button--primary" href="./contact.html?type=trial&amp;class=${encodeURIComponent(item.id)}">この教室の体験を申し込む</a>
+  </article>`;
+
+const classListHtml = (classes, ageGroups) =>
+  classes.length === 0
+    ? '<p class="empty-message">該当する教室はありません。</p>'
+    : classes.map((item) => classCardHtml(item, ageGroups)).join('');
+
+const classHighlightHtml = (item) => `
+  <li><a class="highlight-card" href="./classes.html#${encodeURIComponent(item.id)}">
+    <span class="highlight-card__icon" aria-hidden="true">${escapeHtml(item.icon)}</span>
+    <span class="highlight-card__name">${escapeHtml(tplDeps.classDisplayName(item))}</span>
+    <span class="highlight-card__target">${escapeHtml(tplDeps.classTargetSummary(item))}／${escapeHtml(item.day)}</span>
+  </a></li>`;
+
+// ---- 会費システム（全教室共通） ----
+
+const feeTermsHtml = (terms) => `
+  <ol class="fee-terms" aria-label="4つの期">${terms.map((term) => `
+    <li><span class="fee-terms__label">${escapeHtml(term.label)}</span><span class="fee-terms__months">${escapeHtml(term.months)}</span></li>`).join('')}
+  </ol>`;
+
+// 見出しはページ側に置き、ここでは期の一覧と説明の定義リストを返す
+const feeSystemHtml = (feeSystem) => `
+  ${feeTermsHtml(feeSystem.terms)}
+  <dl class="fee-system__rows">${tplDeps.feeSystemRows(feeSystem).map(([label, value]) =>
+    `<div><dt>${escapeHtml(label)}</dt><dd>${escapeHtml(value)}</dd></div>`).join('')}</dl>`;
+
+// ---- スポーツ安全保険（開閉式の小さな料金表） ----
+
+const insuranceTableHtml = (insurance) => `
+  <table class="mini-table">
+    <thead><tr><th scope="col">区分</th><th scope="col">料金</th></tr></thead>
+    <tbody>${tplDeps.insuranceRows(insurance).map(([label, price]) =>
+      `<tr><th scope="row">${escapeHtml(label)}</th><td>${escapeHtml(price)}</td></tr>`).join('')}</tbody>
+  </table>`;
+
+// 閉じた状態では料金の幅だけを見せ、開くと区分ごとの料金表を表示する
+const insuranceHtml = (insurance) => `
+  <details class="insurance">
+    <summary><span class="insurance__range">${escapeHtml(tplDeps.insuranceRangeText(insurance))}</span><span class="insurance__toggle">区分ごとの料金を見る</span></summary>
+    ${insuranceTableHtml(insurance)}
+    <p class="insurance__note">${escapeHtml(insurance.note)}</p>
+  </details>`;
+
+// ---- 「会費について」ブロック全体（クラブ概要・教室案内で共通） ----
+
+const feeInfoTableHtml = (classes, feeSystem, insurance) => `
+  <table class="info-table">
+    <tbody>
+      <tr><th scope="row">教室の会費</th><td>1期あたり ${escapeHtml(tplDeps.classFeeRangeText(classes))}（教室ごとの金額・回数は<a href="./classes.html#class-list-heading">教室案内</a>をご覧ください）</td></tr>
+      <tr><th scope="row">${escapeHtml(tplDeps.insuranceTitle(insurance))}</th><td>${insuranceHtml(insurance)}</td></tr>
+      <tr><th scope="row">体験参加</th><td>${escapeHtml(feeSystem.trialNote)}</td></tr>
+    </tbody>
+  </table>`;
+
+// 見出し「会費について」はページ側に置き、その下の会費システム・表・注記を返す
+const feeInfoHtml = (classes, feeSystem, insurance) => `
+  <div class="fee-system">
+    <h3 class="fee-system__title">会費システム<span class="fee-system__badge">全教室共通</span></h3>
+    ${feeSystemHtml(feeSystem)}
+  </div>
+  ${feeInfoTableHtml(classes, feeSystem, insurance)}
+  <p class="note">${escapeHtml(feeSystem.disclaimer)}</p>`;
+
+// ---- フォーム ----
+
+const classOptionsHtml = (classes, selectedId) =>
+  ['<option value="">選択してください</option>', ...classes.map((item) =>
+    `<option value="${escapeHtml(item.id)}"${item.id === selectedId ? ' selected' : ''}>${escapeHtml(tplDeps.classDisplayName(item))}</option>`)].join('');
+
+const inquiryTypeRadiosHtml = (types, selectedId) =>
+  types.map((type) => `
+    <label class="choice"><input type="radio" name="inquiryType" value="${escapeHtml(type.id)}"${type.id === selectedId ? ' checked' : ''}>
+    <span>${escapeHtml(type.label)}</span></label>`).join('');
+
+const gradeOptionsHtml = (grades) =>
+  ['<option value="">選択してください</option>', ...grades.map((grade) =>
+    `<option value="${escapeHtml(grade.id)}">${escapeHtml(grade.label)}</option>`)].join('');
+
+// 送信内容の確認一覧に出す項目名（同意チェックは出さない）
+const COMPLETION_LABELS = Object.freeze({
+  inquiryType: '種別', classId: '希望教室', preferredDate: '希望日', guardianName: '保護者名',
+  participantName: '参加者のお名前', schoolName: '学校名', grade: '学年', age: '年齢',
+  name: 'お名前', email: 'メールアドレス', tel: '電話番号', message: '内容',
+});
+
+// 入力値をそのまま出さない項目の表示形式
+const completionFormatters = (classes) => ({
+  inquiryType: tplDeps.inquiryTypeLabel,
+  classId: (id) => tplDeps.classDisplayName(classes.find((item) => item.id === id) ?? { name: '指定なし' }),
+  preferredDate: tplDeps.formatDateJa,
+  grade: tplDeps.gradeLabel,
+  age: (age) => `${age}歳`,
+});
+
+// 送信内容の確認用 [項目名, 値] の配列を作る（選ばれた種別の項目だけ）
+const completionRows = (values, classes) => {
+  const formatters = completionFormatters(classes);
+  return tplDeps.fieldsForType(values.inquiryType).filter((field) => COMPLETION_LABELS[field])
+    .map((field) => [COMPLETION_LABELS[field], (formatters[field] ?? String)(values[field])]);
+};
+
+const completionTableHtml = (rows) =>
+  `<dl class="summary-list">${rows.map(([label, value]) =>
+    `<div><dt>${escapeHtml(label)}</dt><dd>${escapeHtml(value)}</dd></div>`).join('')}</dl>`;
+
+// ---- 案内文 ----
+
+const resultCountText = (count, unit) => `${count}${unit}を表示しています。`;
+
+const errorSummaryText = (count) =>
+  count === 0 ? '' : `入力内容に${count}件の確認事項があります。赤字の説明をご確認ください。`;
+
+if (typeof module === 'object' && module.exports) {
+  module.exports = {
+    escapeHtml, newsListHtml, newsLinkListHtml, filterButtonsHtml, classCardHtml, classListHtml, classHighlightHtml, feeSystemHtml, insuranceHtml, feeInfoHtml,
+    classOptionsHtml, inquiryTypeRadiosHtml, gradeOptionsHtml, completionRows, completionTableHtml,
+    resultCountText, errorSummaryText,
+  };
+}
