@@ -207,7 +207,7 @@ p { margin: 0 0 1em; }
 .attach-icon { flex: none; width: 1.15em; height: 1.15em; }
 /* 行にカーソルを乗せた・開いたときは、矢印と同じテーマカラーに変えて「押せる」ことを伝える */
 .news-row:hover .attach-mark, .news-entry[open] .attach-mark { color: var(--color-primary); }
-.news-row:has(.attach-mark) { grid-template-columns: 1fr auto auto; grid-template-areas: "meta clip side" "title clip side"; }
+.news-row:has(.attach-mark) { grid-template-columns: 1fr auto auto; grid-template-areas: "meta meta side" "title clip side"; }
 .news-file-button .attach-icon { width: 1.3em; height: 1.3em; }
 .news-row__toggle, .news-row__arrow { grid-area: side; display: grid; place-items: center; width: 32px; height: 32px; border-radius: 50%; background: var(--color-primary-soft); color: var(--color-primary-dark); font-weight: 700; }
 .news-row__toggle::before { content: ""; width: 8px; height: 8px; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: translateY(-2px) rotate(45deg); transition: transform 0.2s; }
