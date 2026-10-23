@@ -16,6 +16,7 @@
         <span class="brand__mark" aria-hidden="true"><svg viewBox="0 0 24 24" width="26" height="26"><circle cx="12" cy="12" r="5" fill="#fff"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9 7 7M17 17l2.1 2.1M4.9 19.1 7 17M17 7l2.1-2.1" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg></span>
         <span class="brand__name" data-config="clubName">みやまスポーツクラブ</span>
       </a>
+      <img class="header-mascot" src="./images/mascot-wave.png" alt="" width="320" height="247">
       <a class="header-tel" href="tel:0863310888" data-tel-link>
         <span class="header-tel__number">電話 <span data-config="tel">0863-31-0888</span></span>
         <span class="header-tel__hours" data-config="telHours">受付：火～土 9:00～19:00</span>
@@ -35,6 +36,7 @@
   <main id="main">
     <div class="page-header">
       <div class="container">
+        <img class="page-header__mascot" src="./images/mascot-welcome.png" alt="" width="320" height="231">
         <h1>クラブ概要</h1>
         <p>わたしたちのクラブについてご紹介します。</p>
       </div>
@@ -72,10 +74,10 @@
           <h3 class="mascot__title">クラブのマスコット「みやすぽくん」</h3>
           <p>頭の「M」と、くつの「S」「C」で、みやまスポーツクラブを表しています。いろいろなスポーツに挑戦中です。</p>
           <ul class="mascot__list">
-            <li><img src="./images/mascot-wave.jpg" alt="両手をふってあいさつする、みやすぽくん" width="480" height="371" loading="lazy"></li>
-            <li><img src="./images/mascot-lift.jpg" alt="バーベルを持ち上げる、みやすぽくん" width="480" height="365" loading="lazy"></li>
-            <li><img src="./images/mascot-table-tennis.jpg" alt="卓球のラケットを持つ、みやすぽくん" width="455" height="480" loading="lazy"></li>
-            <li><img src="./images/mascot-run.jpg" alt="ピースをしながら元気に走る、みやすぽくん" width="480" height="381" loading="lazy"></li>
+            <li><img src="./images/mascot-wave.png" alt="両手をふってあいさつする、みやすぽくん" width="320" height="247" loading="lazy"></li>
+            <li><img src="./images/mascot-lift.png" alt="バーベルを持ち上げる、みやすぽくん" width="320" height="244" loading="lazy"></li>
+            <li><img src="./images/mascot-table-tennis.png" alt="卓球のラケットを持つ、みやすぽくん" width="303" height="320" loading="lazy"></li>
+            <li><img src="./images/mascot-run.png" alt="ピースをしながら元気に走る、みやすぽくん" width="320" height="254" loading="lazy"></li>
           </ul>
         </div>
       </div>
@@ -91,14 +93,17 @@
 
     <section class="section section--soft" aria-labelledby="access-heading">
       <div class="container">
-        <div class="section__header"><h2 id="access-heading">アクセス</h2></div>
+        <div class="section__header"><h2 id="access-heading">アクセス<img class="heading-mascot" src="./images/mascot-run.png" alt="" width="320" height="254"></h2></div>
         <table class="info-table">
           <tbody>
             <tr><th scope="row">会場</th><td data-config="venue">玉野スポーツセンター</td></tr>
             <tr><th scope="row">住所</th><td data-config="address">岡山県玉野市田井2-4464-10 玉野スポーツセンター内</td></tr>
           </tbody>
         </table>
-        <div class="map-placeholder" role="img" aria-label="地図（準備中）">地図は準備中です。<br>ご来場の際は上記の住所をご確認ください。</div>
+        <div class="map-embed">
+          <iframe src="https://maps.google.com/maps?q=%E7%8E%89%E9%87%8E%E3%82%B9%E3%83%9D%E3%83%BC%E3%83%84%E3%82%BB%E3%83%B3%E3%82%BF%E3%83%BC%20%E5%B2%A1%E5%B1%B1%E7%9C%8C%E7%8E%89%E9%87%8E%E5%B8%82%E7%94%B0%E4%BA%952-4464-10&amp;z=16&amp;output=embed" title="玉野スポーツセンターの地図（Googleマップ）" loading="lazy" referrerpolicy="no-referrer-when-downgrade" allowfullscreen></iframe>
+        </div>
+        <p class="map-link"><a href="https://www.google.com/maps/search/?api=1&amp;query=%E7%8E%89%E9%87%8E%E3%82%B9%E3%83%9D%E3%83%BC%E3%83%84%E3%82%BB%E3%83%B3%E3%82%BF%E3%83%BC%20%E5%B2%A1%E5%B1%B1%E7%9C%8C%E7%8E%89%E9%87%8E%E5%B8%82%E7%94%B0%E4%BA%952-4464-10" target="_blank" rel="noopener noreferrer">Googleマップで大きく見る（新しいタブで開きます）</a></p>
       </div>
     </section>
   </main>
@@ -107,6 +112,10 @@
     <div class="container">
       <div class="site-footer__grid">
         <div>
+          <div class="footer-mascot">
+            <span class="footer-mascot__badge"><img class="footer-mascot__img" src="./images/mascot-welcome.png" alt="" width="320" height="231"></span>
+            <p class="footer-mascot__bubble">いっしょにスポーツを楽しもう！</p>
+          </div>
           <p class="site-footer__name" data-config="clubName">みやまスポーツクラブ</p>
           <p>所在地：<span data-config="address">岡山県玉野市田井2-4464-10 玉野スポーツセンター内</span></p>
           <p><a class="site-footer__tel" href="tel:0863310888" data-tel-link><span data-config="tel">0863-31-0888</span></a><br><span data-config="telHours">受付：火～土 9:00～19:00</span></p>
